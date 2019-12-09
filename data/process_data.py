@@ -3,7 +3,17 @@ import pandas as pd
 from sqlite3 import *
 from sqlalchemy import *
 
+
 def load_data(messages_filepath, categories_filepath):
+    """
+    Load Data function
+
+    Arguments:
+        messages_filepath -> path to messages csv file
+        categories_filepath -> path to categories csv file
+    Output:
+        df -> Loaded dasa as Pandas DataFrame
+    """
     messages = pd.read_csv(messages_filepath)
     categories = pd.read_csv(categories_filepath)
     df = messages.merge(categories, how='inner',on=['id'])
@@ -12,30 +22,53 @@ def load_data(messages_filepath, categories_filepath):
 
 
 def clean_data(df):
+    """
+    Clean Data function
+
+    Arguments:
+        df -> raw data Pandas DataFrame
+    Outputs:
+        df -> cleaned data Pandas DataFrame afer processing it
+    """
     categories = df['categories'].str.split(';', expand=True)
     row = categories.iloc[0]
     category_colnames = row.str.split('-').str[0]
     categories= categories.rename(columns=category_colnames)
-    
+
     for column in categories:
         # set each value to be the last character of the string
         categories[column] = categories[column].str[-1:]
 
         # convert column from string to numeric
         categories[column] = categories[column].astype(int)
-        
+
     df = df.drop('categories', axis=1)
     df = pd.concat([df, categories],axis = 1 )
 
     # drop duplicates
     df = df.drop_duplicates()
     return df
-        
+
 def save_data(df, database_filename):
+    """
+    Save Data function
+
+    Arguments:
+        df -> Clean data Pandas DataFrame
+        database_filename -> database file (.db) destination path
+    """
     engine = create_engine('sqlite:///'+database_filename)
-    df.to_sql('disaster_response', engine, if_exists='replace',index=False)  
+    df.to_sql('disaster_response', engine, if_exists='replace',index=False)
 
 def main():
+    """
+    Main Data Processing function
+
+    This function implement the ETL pipeline:
+        1) Data extraction from .csv
+        2) Data cleaning and pre-processing
+        3) Data loading to SQLite database
+    """
     if len(sys.argv) == 4:
 
         messages_filepath, categories_filepath, database_filepath = sys.argv[1:]
@@ -46,12 +79,12 @@ def main():
 
         print('Cleaning data...')
         df = clean_data(df)
-        
+
         print('Saving data...\n    DATABASE: {}'.format(database_filepath))
         save_data(df, database_filepath)
-        
+
         print('Cleaned data saved to database!')
-    
+
     else:
         print('Please provide the filepaths of the messages and categories '\
               'datasets as the first and second argument respectively, as '\
